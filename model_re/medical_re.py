@@ -70,7 +70,7 @@ class IterableDataset(torch.utils.data.IterableDataset):
         num_p = config.num_p
 
         """
-        一些列指标：
+        一系列指标：
             batch_token_ids
             batch_mask_ids
             batch_segment_ids
@@ -132,6 +132,10 @@ class Model4s(nn.Module):
         for param in self.bert.parameters():
             param.requires_grad = True
         self.dropout = nn.Dropout(p=0.2)
+        """ 
+        out_features=2 预测一个句子中每个位置是否是主体的开始和结束位置，
+        S & E，这是基于每个字去做的
+        """
         self.linear = nn.Linear(in_features=hidden_size, out_features=2, bias=True)
         self.sigmoid = nn.Sigmoid()
 
@@ -211,6 +215,16 @@ def train(train_data_loader, model4s, model4po, optimizer):
         for bi, batch in enumerate(train_data_loader):
             if bi >= len(train_data_loader) // config.batch_size:
                 break
+
+            """
+            一系列指标：
+                batch_token_ids
+                batch_mask_ids
+                batch_segment_ids
+                batch_subject_ids
+                batch_subject_labels
+                batch_object_labels
+            """
             batch_token_ids, batch_mask_ids, batch_segment_ids, batch_subject_labels, batch_subject_ids, batch_object_labels = batch
             batch_token_ids = torch.tensor(batch_token_ids, dtype=torch.long)
             batch_mask_ids = torch.tensor(batch_mask_ids, dtype=torch.long)
@@ -394,11 +408,18 @@ def run_train():
     num_train_data = len(train_data)
     checkpoint = torch.load(config.PATH_MODEL)
 
-    model4s = Model4s()  # model for 主体
+    """
+    model for 主体：预测主体位置
+    model for 关系 & 客体：预测客体位置和主客体关系
+    
+    流程：
+        先通过 model4s 找到主体（比如百日咳），然后通过 model4po 找到客体和关系（咳嗽、症状）
+    """
+    model4s = Model4s()
     model4s.load_state_dict(checkpoint['model4s_state_dict'])
     # model4s.cuda()
 
-    model4po = Model4po()  # model for 关系 & 客体
+    model4po = Model4po()
     model4po.load_state_dict(checkpoint['model4po_state_dict'])
     # model4po.cuda()
 
