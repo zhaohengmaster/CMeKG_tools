@@ -32,12 +32,12 @@ class config:
         spo：主体-关系-客体
     """
 
-    PATH_SCHEMA = "/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/model_re/predicate.json"
-    PATH_TRAIN = '/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/model_re/train_example.json'
+    PATH_SCHEMA = "/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/predicate.json"
+    PATH_TRAIN = '/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/train_example.json'
     PATH_BERT = "/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/medical_re/"
     PATH_MODEL = "/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/medical_re/model_re.pkl"
-    PATH_SAVE = '/content/model_re.pkl'
-    tokenizer = BertTokenizer.from_pretrained("/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/medical_re/" + 'vocab.txt')
+    PATH_SAVE = '/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/save/model_re.pkl'
+    tokenizer = BertTokenizer.from_pretrained("/Users/apple/fileImp/CV/CMeKG/CMeKG_tools/medical_re/vocab.txt")
 
     id2predicate = {}
     predicate2id = {}
