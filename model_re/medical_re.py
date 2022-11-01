@@ -68,6 +68,16 @@ class IterableDataset(torch.utils.data.IterableDataset):
         batch_size = config.batch_size
         max_seq_len = config.max_seq_len
         num_p = config.num_p
+
+        """
+        一些列指标：
+            batch_token_ids
+            batch_mask_ids
+            batch_segment_ids
+            batch_subject_ids
+            batch_subject_labels
+            batch_object_labels
+        """
         batch_token_ids = np.zeros((batch_size, max_seq_len), dtype=np.int)
         batch_mask_ids = np.zeros((batch_size, max_seq_len), dtype=np.int)
         batch_segment_ids = np.zeros((batch_size, max_seq_len), dtype=np.int)
@@ -369,9 +379,9 @@ def evaluate(data, is_print, model4s, model4po):
 
 
 def run_train():
-    load_schema(config.PATH_SCHEMA)
+    load_schema(config.PATH_SCHEMA)  # 加载23种关系
     train_path = config.PATH_TRAIN
-    all_data = load_data(train_path)
+    all_data = load_data(train_path)  # 加载训练数据，spo序列
     random.shuffle(all_data)
 
     # 8:2划分训练集、验证集
@@ -384,11 +394,11 @@ def run_train():
     num_train_data = len(train_data)
     checkpoint = torch.load(config.PATH_MODEL)
 
-    model4s = Model4s()
+    model4s = Model4s()  # model for 主体
     model4s.load_state_dict(checkpoint['model4s_state_dict'])
     # model4s.cuda()
 
-    model4po = Model4po()
+    model4po = Model4po()  # model for 关系 & 客体
     model4po.load_state_dict(checkpoint['model4po_state_dict'])
     # model4po.cuda()
 
