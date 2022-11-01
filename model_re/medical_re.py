@@ -70,13 +70,21 @@ class IterableDataset(torch.utils.data.IterableDataset):
         num_p = config.num_p
 
         """
+        数据预处理
+        
         一系列指标：
-            batch_token_ids
-            batch_mask_ids
-            batch_segment_ids
-            batch_subject_ids
-            batch_subject_labels
-            batch_object_labels
+            batch_token_ids: [1, 256] 
+                input id
+            batch_mask_ids: [1, 256]
+                
+            batch_segment_ids: [1, 256]
+                
+            batch_subject_ids: [1, 2]
+                
+            batch_subject_labels: [1, 256, 2]
+                
+            batch_object_labels: [1, 256, 23, 2]
+                
         """
         batch_token_ids = np.zeros((batch_size, max_seq_len), dtype=np.int)
         batch_mask_ids = np.zeros((batch_size, max_seq_len), dtype=np.int)
@@ -118,8 +126,12 @@ class IterableDataset(torch.utils.data.IterableDataset):
                 batch_object_labels[:, :, :, :] = 0
                 batch_i = 0
 
+    """
+    这个 dataloader 写的不是很标准，可以参考下pytorch的标准dataloader写法
+    """
+
     def get_stream(self):
-        return cycle(self.process_data())
+        return cycle(self.process_data())  # cycle 重复循环的取数据集中的每一个数据
 
     def __iter__(self):
         return self.get_stream()
@@ -414,6 +426,9 @@ def run_train():
     
     流程：
         先通过 model4s 找到主体（比如百日咳），然后通过 model4po 找到客体和关系（咳嗽、症状）
+        
+    问题：
+        想想为什么分成两个模型？不能放在一个模型中都预测了吗？
     """
     model4s = Model4s()
     model4s.load_state_dict(checkpoint['model4s_state_dict'])
