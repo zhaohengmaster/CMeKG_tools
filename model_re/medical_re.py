@@ -72,7 +72,7 @@ class IterableDataset(torch.utils.data.IterableDataset):
         """
         数据预处理
         
-        一系列指标：
+        一系列指标，前三个是huggingface bert需要的：
             batch_token_ids: [1, 256] 
                 input id 输入字符编码
             batch_mask_ids: [1, 256]
@@ -83,10 +83,10 @@ class IterableDataset(torch.utils.data.IterableDataset):
             batch_subject_ids: [1, 2]
                 subject: 主体
                 一个主体的起始和结束位置，一个主体一个主体的训练，不是所有主体一起训练
-                以主体为单位去训练
+                以主体为单位去训练，观测训练数据发现一个句子只有一个主体
             batch_subject_labels: [1, 256, 2]
                 subject: 主体
-                主体标签，每个字符是主体的起始和结束位置标签
+                主体标签，每个字符都有可能是主体的起始和结束位置
             batch_object_labels: [1, 256, 23, 2]
                 object: 客体
                 客体标签，每个字符是否与已确定的主体有关系，如果有关系确定是什么关系，
@@ -104,6 +104,7 @@ class IterableDataset(torch.utils.data.IterableDataset):
             """
             encode完的结果是什么？好像是对应字符表中的字符id，
             还没有编码embedding，编码是在bert模型中做的
+            tokenizer 分词器
             """
             batch_token_ids[batch_i, :] = self.tokenizer.encode(text, max_length=max_seq_len, pad_to_max_length=True,
                                                                 add_special_tokens=True)
@@ -158,13 +159,18 @@ class Model4s(nn.Module):
         for param in self.bert.parameters():
             param.requires_grad = True
         self.dropout = nn.Dropout(p=0.2)
+        self.linear = nn.Linear(in_features=hidden_size, out_features=2, bias=True)
+        self.sigmoid = nn.Sigmoid()
         """ 
         out_features=2 预测一个句子中每个位置是否是主体的开始和结束位置，
         S & E，这是基于每个字去做的
-        这个2还是没弄清楚
+
+        hidden_states [1, 256, 768]  
+        隐层特征，相当于做过embedding并且经过transformer后的特征
+        output [1, 256, 2]
+        
+        output 加平方项，为了更好的阈值筛选
         """
-        self.linear = nn.Linear(in_features=hidden_size, out_features=2, bias=True)
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, input_ids, input_mask, segment_ids, hidden_size=768):
         hidden_states = self.bert(input_ids,
@@ -181,6 +187,20 @@ class Model4po(nn.Module):
         self.dropout = nn.Dropout(p=0.4)
         self.linear = nn.Linear(in_features=hidden_size, out_features=num_p * 2, bias=True)
         self.sigmoid = nn.Sigmoid()
+        """ 
+        out_features = num_p * 2 
+        预测一个句子中每个位置是否是客体的开始和结束位置，并且预测与主体的关系
+        S & E，这是基于每个字去做的
+
+        hidden_states [1, 256, 768]  all_s
+        隐层特征，相当于做过embedding并且经过transformer后的特征
+        output [1, 256, num_p * 2]
+
+        output 加4方项，为了更好的阈值筛选
+        
+        把主体的起始位置特征和终止位置特征相加然后加到所有位置上然后再来预测客体位置和关系
+        s [768]
+        """
 
     def forward(self, hidden_states, batch_subject_ids, input_mask):
         all_s = torch.zeros((hidden_states.shape[0], hidden_states.shape[1], hidden_states.shape[2]),
