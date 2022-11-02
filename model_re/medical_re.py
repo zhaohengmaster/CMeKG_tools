@@ -101,12 +101,20 @@ class IterableDataset(torch.utils.data.IterableDataset):
         batch_i = 0
         for i in idxs:
             text = self.data[i]['text']
+            """
+            encode完的结果是什么？好像是对应字符表中的字符id，
+            还没有编码embedding，编码是在bert模型中做的
+            """
             batch_token_ids[batch_i, :] = self.tokenizer.encode(text, max_length=max_seq_len, pad_to_max_length=True,
                                                                 add_special_tokens=True)
             batch_mask_ids[batch_i, :len(text) + 2] = 1
             spo_list = self.data[i]['spo_list']
-            idx = np.random.randint(0, len(spo_list), size=1)[0]
-            s_rand = self.tokenizer.encode(spo_list[idx][0])[1:-1]
+            """
+            这个随机选择的idx 观测数据默认是一个spo list 里都是同一个主体
+            如果一个spo list里有多个不同的主体 这个逻辑就需要改进
+            """
+            idx = np.random.randint(0, len(spo_list), size=1)[0]  # 有多个主体，每次随机选择一个主体
+            s_rand = self.tokenizer.encode(spo_list[idx][0])[1:-1]  # 主体ID编码 [1:-1] 去掉特殊符号
             s_rand_idx = self.search(list(batch_token_ids[batch_i, :]), s_rand)
             batch_subject_ids[batch_i, :] = [s_rand_idx, s_rand_idx + len(s_rand) - 1]
             for i in range(len(spo_list)):
@@ -117,11 +125,11 @@ class IterableDataset(torch.utils.data.IterableDataset):
                 s_idx = self.search(list(batch_token_ids[batch_i]), s)
                 o_idx = self.search(list(batch_token_ids[batch_i]), o)
                 if s_idx != -1 and o_idx != -1:
-                    batch_subject_labels[batch_i, s_idx, 0] = 1
-                    batch_subject_labels[batch_i, s_idx + len(s) - 1, 1] = 1
-                    if s_idx == s_rand_idx:
-                        batch_object_labels[batch_i, o_idx, p, 0] = 1
-                        batch_object_labels[batch_i, o_idx + len(o) - 1, p, 1] = 1
+                    batch_subject_labels[batch_i, s_idx, 0] = 1  # 起始位置
+                    batch_subject_labels[batch_i, s_idx + len(s) - 1, 1] = 1  # 终止位置
+                    if s_idx == s_rand_idx:  # 遍历的主体是否为上面随机选的主体
+                        batch_object_labels[batch_i, o_idx, p, 0] = 1  # 起始位置
+                        batch_object_labels[batch_i, o_idx + len(o) - 1, p, 1] = 1  # 终止位置
             batch_i += 1
             if batch_i == batch_size or i == idxs[-1]:
                 yield batch_token_ids, batch_mask_ids, batch_segment_ids, batch_subject_labels, batch_subject_ids, batch_object_labels
@@ -153,6 +161,7 @@ class Model4s(nn.Module):
         """ 
         out_features=2 预测一个句子中每个位置是否是主体的开始和结束位置，
         S & E，这是基于每个字去做的
+        这个2还是没弄清楚
         """
         self.linear = nn.Linear(in_features=hidden_size, out_features=2, bias=True)
         self.sigmoid = nn.Sigmoid()
