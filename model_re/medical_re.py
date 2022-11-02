@@ -199,7 +199,9 @@ class Model4po(nn.Module):
         output 加4方项，为了更好的阈值筛选
         
         把主体的起始位置特征和终止位置特征相加然后加到所有位置上然后再来预测客体位置和关系
-        s [768]
+        s [768] s就相当于主体的特征
+        把主体的特征加到所有位置上然后再来预测客体位置和关系，相当于强制加上主体的特征，这样预测更加准确
+        这个加法可以改成拼接，写专利或者论文
         """
 
     def forward(self, hidden_states, batch_subject_ids, input_mask):
