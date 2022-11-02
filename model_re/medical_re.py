@@ -74,17 +74,23 @@ class IterableDataset(torch.utils.data.IterableDataset):
         
         一系列指标：
             batch_token_ids: [1, 256] 
-                input id
+                input id 输入字符编码
             batch_mask_ids: [1, 256]
-                
+                mask id 每个字符是否参与transformer 是否参与计算
             batch_segment_ids: [1, 256]
-                
+                segment：段
+                指定输入中每个字符分别是第几句话（段）
             batch_subject_ids: [1, 2]
-                
+                subject: 主体
+                一个主体的起始和结束位置，一个主体一个主体的训练，不是所有主体一起训练
+                以主体为单位去训练
             batch_subject_labels: [1, 256, 2]
-                
+                subject: 主体
+                主体标签，每个字符是主体的起始和结束位置标签
             batch_object_labels: [1, 256, 23, 2]
-                
+                object: 客体
+                客体标签，每个字符是否与已确定的主体有关系，如果有关系确定是什么关系，
+                并且确定客体的起始和终止位置标签
         """
         batch_token_ids = np.zeros((batch_size, max_seq_len), dtype=np.int)
         batch_mask_ids = np.zeros((batch_size, max_seq_len), dtype=np.int)
@@ -230,12 +236,24 @@ def train(train_data_loader, model4s, model4po, optimizer):
 
             """
             一系列指标：
-                batch_token_ids
-                batch_mask_ids
-                batch_segment_ids
-                batch_subject_ids
-                batch_subject_labels
-                batch_object_labels
+                batch_token_ids: [1, 256] 
+                    input id 输入字符编码
+                batch_mask_ids: [1, 256]
+                    mask id 每个字符是否参与transformer 是否参与计算
+                batch_segment_ids: [1, 256]
+                    segment：段
+                    指定输入中每个字符分别是第几句话（段）
+                batch_subject_ids: [1, 2]
+                    subject: 主体
+                    一个主体的起始和结束位置，一个主体一个主体的训练，不是所有主体一起训练
+                    以主体为单位去训练
+                batch_subject_labels: [1, 256, 2]
+                    subject: 主体
+                    主体标签，每个字符是主体的起始和结束位置标签
+                batch_object_labels: [1, 256, 23, 2]
+                    object: 客体
+                    客体标签，每个字符是否与已确定的主体有关系，如果有关系确定是什么关系，
+                    并且确定客体的起始和终止位置标签
             """
             batch_token_ids, batch_mask_ids, batch_segment_ids, batch_subject_labels, batch_subject_ids, batch_object_labels = batch
             batch_token_ids = torch.tensor(batch_token_ids, dtype=torch.long)
